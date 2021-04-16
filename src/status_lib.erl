@@ -1,7 +1,5 @@
 -module(status_lib).
 
--include("../include/status_lib.hrl").
-
 %% API
 -export([register_handler/1, status/0]).
 
