@@ -1,12 +1,19 @@
 -module(status_lib).
 
+-include_lib("kernel/include/file.hrl").
+
 %% API
 -export([register_handler/1, status/0]).
 
 %% Helpers
--export([node_connectivity/1, node_connectivity/2, process_status/1, process_status/2]).
+-export([ node_connectivity/1
+        , node_connectivity/2
+        , process_status/1
+        , process_status/2
+        , writable_dir/1
+        ]).
 
--type category() :: connectivity | process_status.
+-type category() :: connectivity | process_status | filesystem.
 -type status_item() ::
         #{label := binary(), category := category(), status := ok | {error, binary()}}.
 
@@ -57,6 +64,22 @@ process_status(RegName, Label) ->
              Port when is_port(Port) -> {error, <<"Name refers to port, not pid">>}
            end,
   #{label => Label, category => process_status, status => Status}.
+
+-spec writable_dir(file:name_all()) -> status_item().
+writable_dir(DirName) ->
+  Status = case file:read_file_info(DirName) of
+             {ok, #file_info{type = T}} when T =/= directory -> {error, <<"Not a directory">>};
+             {ok, #file_info{access = A}} when
+                 A =:= read;
+                 A =:= none ->
+               {error, <<"No write access">>};
+             {ok, _} -> ok;
+             {error, E} -> {error, <<"Problem: ", (atom_to_binary(E, utf8))/binary>>}
+           end,
+  #{ label => unicode:characters_to_binary(DirName, utf8)
+   , category => filesystem
+   , status => Status
+   }.
 
 %%==============================================================================================
 %% Internal functions
