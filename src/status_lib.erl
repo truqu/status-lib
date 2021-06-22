@@ -11,9 +11,10 @@
         , process_status/1
         , process_status/2
         , writable_dir/1
+        , dns_resolution/1
         ]).
 
--type category() :: connectivity | process_status | filesystem.
+-type category() :: connectivity | process_status | filesystem | network.
 -type status_item() ::
         #{label := binary(), category := category(), status := ok | {error, binary()}}.
 
@@ -80,6 +81,15 @@ writable_dir(DirName) ->
    , category => filesystem
    , status => Status
    }.
+
+-spec dns_resolution(inet_res:dns_name()) -> status_item().
+dns_resolution(Hostname) ->
+  Status = case inet_res:gethostbyname(Hostname) of
+             {ok, _} -> ok;
+             {error, Reason} ->
+               {error, <<"Failed to resolve: ", (atom_to_binary(Reason, utf8))/binary>>}
+           end,
+  #{label => list_to_binary(Hostname), category => network, status => Status}.
 
 %%==============================================================================================
 %% Internal functions
